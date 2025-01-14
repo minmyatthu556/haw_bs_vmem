@@ -316,8 +316,54 @@ public class OperatingSystem {
      * Zugriffsfehler
      */
     public synchronized int read(int pid, int virtAdr) {
-        // ToDo
-        throw new RuntimeException("Nicht implementiert");
+        int virtualPageNum;
+        int offset;
+        int realAddressOfItem;
+        Process proc;
+        PageTableEntry pte;
+
+        if ((virtAdr < 0) || (virtAdr > VIRT_ADR_SPACE - WORD_SIZE)) {
+            System.err.println("OS: read ERROR " + pid + ": Adresse "
+                    + virtAdr
+                    + " liegt außerhalb des virtuellen Adressraums 0 - "
+                    + VIRT_ADR_SPACE);
+            return -1;
+        }
+
+        virtualPageNum = getVirtualPageNum(virtAdr);
+        offset = getOffset(virtAdr);
+
+        testOut("OS: read " + pid + " " + virtAdr
+                + " +++ Seitennr.: " + virtualPageNum + " Offset: " + offset);
+
+        proc = getProcess(pid);
+        pte = proc.pageTable.getPte(virtualPageNum);
+        if (pte == null) {
+            testOut("OS: read " + pid + " +++ Seitennr.: " + virtualPageNum
+                    + " in Seitentabelle nicht vorhanden");
+            return -1;
+        } else {
+            if (!pte.valid) {
+                // Seite nicht valid (also auf Platte --> Seitenfehler):
+                pte = handlePageFault(pte, pid);
+            }
+        }
+
+        // ------ Zustand: Seite ist in Seitentabelle und im RAM vorhanden
+
+        realAddressOfItem = pte.realPageFrameAdr + offset;
+
+        byte item = readFromRAM(realAddressOfItem);
+        testOut("OS: read " + pid + " +++ item: " + item
+                + " erfolgreich von virt. Adresse " + virtAdr
+                + " gelesen! RAM-Adresse: " + realAddressOfItem + " \n");
+
+        // Seitentabelle bzgl. Zugriffshistorie aktualisieren
+        pte.referenced = true;
+
+        // Statistische Zählung
+        eventLog.incrementReadAccesses();
+        return item;
     }
 
     // --------------- Private Methoden des Betriebssystems
@@ -335,8 +381,7 @@ public class OperatingSystem {
      * @return Die entsprechende virtuelle Seitennummer
      */
     private int getVirtualPageNum(int virtAdr) {
-        // ToDo
-        throw new RuntimeException("Nicht implementiert");
+        return virtAdr/ getPAGE_SIZE();
     }
 
     /**
@@ -344,8 +389,7 @@ public class OperatingSystem {
      * @return Den entsprechenden Offset zur Berechnung der realen Adresse
      */
     private int getOffset(int virtAdr) {
-        // ToDo
-        throw new RuntimeException("Nicht implementiert");
+        return virtAdr % getPAGE_SIZE();
     }
 
     /**

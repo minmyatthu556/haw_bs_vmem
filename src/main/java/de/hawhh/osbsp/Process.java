@@ -67,7 +67,7 @@ public class Process extends Thread {
         int median; // Mittelwert für virtuelle Adressen
         int bias; // Streuung um den Mittelwert
         int virtAdr; // Virtuelle Adresse
-        int i; // Z�hler
+        int i; // Zaehler
 
         // Streuungsbereich festlegen (Anzahl Seiten)
         bias = BIAS_FACTOR * os.getPAGE_SIZE();
